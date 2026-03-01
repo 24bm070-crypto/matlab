@@ -1,0 +1,115 @@
+clc;
+clear;
+close all;
+
+%% -------------------------------
+% ICU MULTIMODAL BIOSIGNAL DASHBOARD
+% --------------------------------
+
+fs = 250;                 % Sampling frequency
+t = 0:1/fs:10;            % 10 seconds duration
+N = length(t);
+
+%% 1. Simulated ECG Signal
+ecg_signal = 1.2*sin(2*pi*1.2*t) + 0.25*sin(2*pi*3*t);
+ecg_signal = ecg_signal + 0.2*randn(size(t));   % Add noise
+
+% Filter ECG (0.5 - 40 Hz Bandpass)
+[b,a] = butter(4,[0.5 40]/(fs/2),'bandpass');
+filtered_ecg = filtfilt(b,a,ecg_signal);
+
+% R-peak detection
+[peaks,locs] = findpeaks(filtered_ecg,'MinPeakHeight',0.8,...
+                          'MinPeakDistance',fs*0.5);
+
+heart_rate = length(peaks) * 6;  % beats per minute (10 sec × 6)
+
+%% 2. Simulated SpO2 Signal
+spo2_signal = 98 + 0.5*sin(2*pi*0.2*t);
+spo2_signal = spo2_signal + 0.3*randn(size(t));
+avg_spo2 = mean(spo2_signal);
+
+%% 3. Simulated Blood Pressure
+systolic = 120 + 5*sin(2*pi*0.1*t);
+diastolic = 80 + 3*sin(2*pi*0.1*t);
+map = (mean(systolic) + 2*mean(diastolic))/3;
+
+%% 4. Simulated Respiratory Rate
+resp_signal = 16 + 2*sin(2*pi*0.15*t);
+avg_rr = mean(resp_signal);
+
+%% -------------------------------
+% DASHBOARD VISUALIZATION
+% -------------------------------
+
+figure('Name','ICU Multimodal Dashboard','NumberTitle','off');
+tiledlayout(2,2);
+
+% ECG Plot
+nexttile
+plot(t,filtered_ecg,'b')
+hold on
+plot(t(locs),peaks,'ro')
+title(['ECG Signal (HR = ' num2str(round(heart_rate)) ' bpm)'])
+xlabel('Time (s)')
+ylabel('Amplitude')
+grid on
+
+% SpO2 Plot
+nexttile
+plot(t,spo2_signal,'g')
+title(['SpO2 Level (Avg = ' num2str(round(avg_spo2)) '%)'])
+xlabel('Time (s)')
+ylabel('SpO2 (%)')
+ylim([85 100])
+grid on
+
+% Blood Pressure Plot
+nexttile
+plot(t,systolic,'r')
+hold on
+plot(t,diastolic,'b')
+title(['Blood Pressure (MAP = ' num2str(round(map)) ' mmHg)'])
+xlabel('Time (s)')
+ylabel('BP (mmHg)')
+legend('Systolic','Diastolic')
+grid on
+
+% Respiratory Rate Plot
+nexttile
+plot(t,resp_signal,'m')
+title(['Respiratory Rate (Avg = ' num2str(round(avg_rr)) ' bpm)'])
+xlabel('Time (s)')
+ylabel('Breaths per Minute')
+grid on
+
+%% -------------------------------
+% ALERT SYSTEM
+% -------------------------------
+
+disp('---------------------------------')
+disp(' ICU PATIENT STATUS REPORT ')
+disp('---------------------------------')
+
+if avg_spo2 < 90
+    disp('ALERT: Low Oxygen Level!')
+end
+
+if heart_rate > 120 || heart_rate < 50
+    disp('ALERT: Abnormal Heart Rate!')
+end
+
+if map < 65
+    disp('ALERT: Low Blood Pressure!')
+end
+
+if avg_rr > 25 || avg_rr < 10
+    disp('ALERT: Abnormal Respiratory Rate!')
+end
+
+if avg_spo2 >= 90 && heart_rate >= 50 && heart_rate <= 120 ...
+        && map >= 65 && avg_rr >= 10 && avg_rr <= 25
+    disp('Patient Status: STABLE')
+end
+
+disp('---------------------------------')
